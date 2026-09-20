@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# LeadTrust — Quality-first lead pipeline
 
-## Getting Started
+Caprae Capital Full Stack handbook challenge: **Quality First** enhancement for the SaaSquatch-style leadgen workflow.
 
-First, run the development server:
+**Live demo:** https://lead-quality-pipeline.vercel.app/ 
+**Repo:** https://github.com/AB-dullah01/lead-quality-pipeline
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+## Problem observed on SaaSquatch
+
+1. **Estimate Revenue** failed with raw Gemini errors in the table (`All GeMini models failed…`).
+2. **Get Owner Details** returned `Not Found` + literal **`NaN`** values.
+3. **Enrich Company** reported “success” while employees / revenue / year founded stayed empty — **credits still burned**.
+
+LeadTrust fixes the paid step: **prioritize with confidence → enrich selectively → charge only when fields actually fill**.
+
+## Demo flow
+
+1. `npm install && npm run dev`
+2. Open [http://localhost:3000](http://localhost:3000)
+3. Pick an **industry**, **country** (USA / Canada / UK / France — same as SaaSquatch), and **city or state**, then **Find companies**
+4. Click **Estimate & score**
+5. Click **Select fit score ≥ 70** (or manually pick thin leads)
+6. Click **Enrich selected**
+7. Compare: rich leads succeed (−1 credit); thin leads show `empty · $0`
+8. **Export CSV**
+
+Demo catalogs are seeded per industry (10 companies each) with a mix of enrichable vs empty — same integrity rule across all buy boxes. City/state accepts free text (e.g. `NY`, `Texas`, `Toronto`, `London`) and stamps onto results.
+
+## Stack
+
+| Layer | Choice |
+|---|---|
+| UI | Next.js 15 + React 19 + Tailwind |
+| API | Next.js Route Handlers (serverless on Vercel) |
+| Scoring | Deterministic heuristics + confidence + in-memory TTL cache |
+| Enrichment | Multi-source simulator (Apollo/Growjo/DB-shaped) with integrity rules |
+| Database | **Cloud Firestore** (GCP) when env configured; otherwise **in-memory** |
+| Hosting | **Vercel** Hobby (free) |
+
+## Architecture
+
+```text
+Browser (LeadTrust UI)
+  → POST /api/session   create discovery set + credits
+  → POST /api/score     fit score + revenue band + confidence
+  → POST /api/enrich    enrich selected; charge only on filled fields
+  → GET  /api/export    CSV download
+  → Firestore sessions/{id}  (when Firebase env is set)
+     else in-memory Map
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Credit integrity rule
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```text
+if fieldsFilled.length === 0 → status=empty, charged=0, waived++
+else → status=success, charged=1
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Never display `NaN` or raw model failure strings.
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Why Quality First (not Quantity Driven)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+SaaSquatch already has many modules. The gap is **trust in the paid pipeline**. One sharp vertical slice scores higher on Caprae’s Business / UX / Technicality rubric than several thin tools.
 
-## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Author
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Built for Caprae Capital Partners Full Stack Developer AI Interview Handbook (Quality First).
